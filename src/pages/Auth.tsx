@@ -15,11 +15,20 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
   const [isLogin, setIsLogin] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [anonymousId, setAnonymousId] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const handleRegister = async () => {
+    if (!phoneNumber) {
+      toast({
+        title: 'Ошибка',
+        description: 'Укажите номер телефона',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (password.length < 6) {
       toast({
         title: 'Ошибка',
@@ -43,7 +52,7 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
       const response = await fetch(AUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'register', password }),
+        body: JSON.stringify({ action: 'register', phone_number: phoneNumber, password }),
       });
 
       const data = await response.json();
@@ -73,7 +82,7 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
   };
 
   const handleLogin = async () => {
-    if (!anonymousId || !password) {
+    if (!phoneNumber || !password) {
       toast({
         title: 'Ошибка',
         description: 'Заполните все поля',
@@ -87,7 +96,7 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
       const response = await fetch(AUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'login', anonymous_id: anonymousId, password }),
+        body: JSON.stringify({ action: 'login', phone_number: phoneNumber, password }),
       });
 
       const data = await response.json();
@@ -101,7 +110,7 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
       } else {
         toast({
           title: 'Ошибка авторизации',
-          description: data.error || 'Неверный ID или пароль',
+          description: data.error || 'Неверный номер или пароль',
           variant: 'destructive',
         });
       }
@@ -132,23 +141,21 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
             <CardTitle>{isLogin ? 'Вход' : 'Регистрация'}</CardTitle>
             <CardDescription>
               {isLogin
-                ? 'Введите свой анонимный ID и пароль'
+                ? 'Введите номер телефона и пароль'
                 : 'Создайте анонимный аккаунт за 30 секунд'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isLogin && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Анонимный ID</label>
-                <Input
-                  type="text"
-                  placeholder="#1234"
-                  value={anonymousId}
-                  onChange={(e) => setAnonymousId(e.target.value)}
-                  className="bg-muted"
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Номер телефона</label>
+              <Input
+                type="tel"
+                placeholder="+7 999 123 45 67"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="bg-muted"
+              />
+            </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Пароль</label>
@@ -198,7 +205,7 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
                   setIsLogin(!isLogin);
                   setPassword('');
                   setConfirmPassword('');
-                  setAnonymousId('');
+                  setPhoneNumber('');
                 }}
               >
                 {isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
@@ -210,8 +217,7 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
                 <div className="flex items-start gap-2">
                   <Icon name="Shield" size={16} className="text-primary mt-1 flex-shrink-0" />
                   <p className="text-xs text-muted-foreground">
-                    После регистрации вы получите уникальный анонимный ID. Сохраните его вместе с
-                    паролем — это единственный способ войти в аккаунт.
+                    После регистрации вы получите уникальный анонимный ID. Для входа используйте свой номер телефона и пароль.
                   </p>
                 </div>
                 <div className="flex items-start gap-2">

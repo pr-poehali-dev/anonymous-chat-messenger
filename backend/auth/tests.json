@@ -6,17 +6,18 @@
       "path": "/",
       "body": {
         "action": "register",
+        "phone_number": "+79991234567",
         "password": "testpass123"
       },
       "expectedStatus": 201
     },
     {
-      "name": "Авторизация существующего пользователя",
+      "name": "Авторизация с неверным паролем",
       "method": "POST",
       "path": "/",
       "body": {
         "action": "login",
-        "anonymous_id": "#1234",
+        "phone_number": "+79999999999",
         "password": "wrongpass"
       },
       "expectedStatus": 401,

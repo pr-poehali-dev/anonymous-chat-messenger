@@ -56,12 +56,31 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             action = body_data.get('action')
             
             if action == 'register':
+                phone_number = body_data.get('phone_number', '').strip()
                 password = body_data.get('password', '')
+                
+                if not phone_number:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Укажите номер телефона'}),
+                        'isBase64Encoded': False
+                    }
+                
                 if len(password) < 6:
                     return {
                         'statusCode': 400,
                         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                         'body': json.dumps({'error': 'Пароль должен быть минимум 6 символов'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cursor.execute("SELECT id FROM users WHERE phone_number = %s", (phone_number,))
+                if cursor.fetchone():
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Этот номер уже зарегистрирован'}),
                         'isBase64Encoded': False
                     }
                 
@@ -83,8 +102,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 
                 password_hash = hash_password(password)
                 cursor.execute(
-                    "INSERT INTO users (anonymous_id, password_hash) VALUES (%s, %s) RETURNING id, anonymous_id, created_at",
-                    (anonymous_id, password_hash)
+                    "INSERT INTO users (anonymous_id, password_hash, phone_number) VALUES (%s, %s, %s) RETURNING id, anonymous_id, phone_number, created_at",
+                    (anonymous_id, password_hash, phone_number)
                 )
                 user = cursor.fetchone()
                 
@@ -103,6 +122,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'body': json.dumps({
                         'user_id': user['id'],
                         'anonymous_id': user['anonymous_id'],
+                        'phone_number': user['phone_number'],
                         'session_token': session_token,
                         'created_at': user['created_at'].isoformat()
                     }),
@@ -110,15 +130,20 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             elif action == 'login':
-                anonymous_id = body_data.get('anonymous_id', '')
+                phone_number = body_data.get('phone_number', '').strip()
                 password = body_data.get('password', '')
                 
-                if not anonymous_id.startswith('#'):
-                    anonymous_id = f'#{anonymous_id}'
+                if not phone_number:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Укажите номер телефона'}),
+                        'isBase64Encoded': False
+                    }
                 
                 cursor.execute(
-                    "SELECT id, anonymous_id, password_hash FROM users WHERE anonymous_id = %s",
-                    (anonymous_id,)
+                    "SELECT id, anonymous_id, phone_number, password_hash FROM users WHERE phone_number = %s",
+                    (phone_number,)
                 )
                 user = cursor.fetchone()
                 
@@ -126,7 +151,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     return {
                         'statusCode': 401,
                         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                        'body': json.dumps({'error': 'Неверный ID или пароль'}),
+                        'body': json.dumps({'error': 'Неверный номер телефона или пароль'}),
                         'isBase64Encoded': False
                     }
                 
@@ -150,6 +175,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'body': json.dumps({
                         'user_id': user['id'],
                         'anonymous_id': user['anonymous_id'],
+                        'phone_number': user['phone_number'],
                         'session_token': session_token
                     }),
                     'isBase64Encoded': False
@@ -167,7 +193,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             cursor.execute(
-                "SELECT s.user_id, u.anonymous_id, u.settings FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.session_token = %s AND s.expires_at > CURRENT_TIMESTAMP",
+                "SELECT s.user_id, u.anonymous_id, u.phone_number, u.settings FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.session_token = %s AND s.expires_at > CURRENT_TIMESTAMP",
                 (session_token,)
             )
             session_data = cursor.fetchone()
@@ -186,6 +212,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'body': json.dumps({
                     'user_id': session_data['user_id'],
                     'anonymous_id': session_data['anonymous_id'],
+                    'phone_number': session_data['phone_number'],
                     'settings': session_data['settings']
                 }),
                 'isBase64Encoded': False
