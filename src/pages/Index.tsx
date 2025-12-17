@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import Auth from './Auth';
 
 type Tab = 'chats' | 'calls' | 'contacts' | 'profile' | 'settings';
 
@@ -43,10 +44,51 @@ const mockCalls: Call[] = [
 ];
 
 export default function Index() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [anonymousId, setAnonymousId] = useState<string>('');
+  const [sessionToken, setSessionToken] = useState<string>('');
   const [activeTab, setActiveTab] = useState<Tab>('chats');
   const [selectedChat, setSelectedChat] = useState<number | null>(1);
   const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('session_token');
+    const storedUserId = localStorage.getItem('user_id');
+    const storedAnonymousId = localStorage.getItem('anonymous_id');
+
+    if (storedToken && storedUserId && storedAnonymousId) {
+      setSessionToken(storedToken);
+      setUserId(parseInt(storedUserId));
+      setAnonymousId(storedAnonymousId);
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleAuthSuccess = (newUserId: number, newAnonymousId: string, newSessionToken: string) => {
+    setUserId(newUserId);
+    setAnonymousId(newAnonymousId);
+    setSessionToken(newSessionToken);
+    setIsAuthenticated(true);
+    localStorage.setItem('session_token', newSessionToken);
+    localStorage.setItem('user_id', newUserId.toString());
+    localStorage.setItem('anonymous_id', newAnonymousId);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUserId(null);
+    setAnonymousId('');
+    setSessionToken('');
+    localStorage.removeItem('session_token');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('anonymous_id');
+  };
+
+  if (!isAuthenticated) {
+    return <Auth onAuthSuccess={handleAuthSuccess} />;
+  }
 
   const renderChatList = () => (
     <div className="flex flex-col h-full">
@@ -265,10 +307,12 @@ export default function Index() {
         
         <div className="flex flex-col items-center gap-4">
           <Avatar className="w-24 h-24">
-            <AvatarFallback className="bg-primary text-primary-foreground text-3xl">ME</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
+              {anonymousId.substring(1, 3).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
           <div className="text-center">
-            <h3 className="text-xl font-bold">Анонимный #5621</h3>
+            <h3 className="text-xl font-bold">Анонимный {anonymousId}</h3>
             <p className="text-sm text-muted-foreground mt-1">Ваш уникальный ID</p>
           </div>
         </div>
@@ -303,9 +347,9 @@ export default function Index() {
           </div>
         </div>
 
-        <Button className="w-full" variant="outline">
-          <Icon name="Edit" size={16} className="mr-2" />
-          Редактировать профиль
+        <Button className="w-full" variant="outline" onClick={handleLogout}>
+          <Icon name="LogOut" size={16} className="mr-2" />
+          Выйти из аккаунта
         </Button>
       </div>
     </div>

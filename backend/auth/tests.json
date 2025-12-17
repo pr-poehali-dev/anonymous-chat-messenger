@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Регистрация нового пользователя",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "password": "testpass123"
+      },
+      "expectedStatus": 201
+    },
+    {
+      "name": "Авторизация существующего пользователя",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "login",
+        "anonymous_id": "#1234",
+        "password": "wrongpass"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
